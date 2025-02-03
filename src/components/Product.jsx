@@ -35,8 +35,8 @@ export default function Product() {
 
 function ProductCard({ image, title, price, rating }) {
   return (
-    <div className="flex-1 transition-transform transform hover:scale-105 hover:shadow-lg">
-      <div className="flex mb-2">
+    <div className="flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg">
+      <div className="mb-2">
         <img
           src={image}
           alt={title}

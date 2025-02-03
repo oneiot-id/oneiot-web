@@ -1,7 +1,31 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 
 export default function FeatureColumns() {
   const navigate = useNavigate();
+
+  const [isScrollbarVisible, setIsScrollbarVisible] = useState(true);
+  const inactivityTimeoutRef = useRef(null);
+
+  // Function to reset the inactivity timer
+  const resetInactivityTimer = () => {
+    setIsScrollbarVisible(true); // Show the scrollbar
+    clearTimeout(inactivityTimeoutRef.current); // Clear the previous timer
+
+    // Set a new timer to hide the scrollbar after 2 seconds of inactivity
+    inactivityTimeoutRef.current = setTimeout(() => {
+      setIsScrollbarVisible(false); // Hide the scrollbar
+    }, 2000); 
+  };
+
+  useEffect(() => {
+    resetInactivityTimer();
+
+    // Clean up the timer on component unmount
+    return () => {
+      clearTimeout(inactivityTimeoutRef.current);
+    };
+  }, []);
 
   const features = [
     {
@@ -56,18 +80,24 @@ export default function FeatureColumns() {
 
   return (
     <>
-      {/* Jasa dan Layanan Section */}
       <div className="mt-3">
         <h1 className="text-2xl font-bold mb-1">Jasa dan Layanan</h1>
-        <div className="flex overflow-x-auto space-x-4 text-center">
+        <div
+          className={`flex overflow-x-auto space-x-4 text-center scrollbar ${
+            isScrollbarVisible ? "" : "scrollbar-hidden"
+          }`}
+          onMouseMove={resetInactivityTimer} // Reset timer on mouse movement
+          onTouchMove={resetInactivityTimer} // Reset timer on touch movement
+        >
           {features.map((feature, index) => (
-            <FeatureCard
-              key={index}
-              icon={feature.icon}
-              title={feature.title}
-              bgColor={feature.bgColor}
-              onClick={() => handleFeatureClick(feature.product)}
-            />
+            <div key={index} className="flex-shrink-0 w-24">
+              <FeatureCard
+                icon={feature.icon}
+                title={feature.title}
+                bgColor={feature.bgColor}
+                onClick={() => handleFeatureClick(feature.product)}
+              />
+            </div>
           ))}
         </div>
       </div>
@@ -79,7 +109,7 @@ function FeatureCard({ icon, title, bgColor, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center bg-white pt-4 px-3 pb-2 rounded-lg transition-all transform hover:scale-105 hover:shadow-lg focus:outline-none"
+      className="flex flex-col items-center bg-white pt-4 px-3 pb-2 rounded-lg transition-all transform hover:scale-105 hover:shadow-lg focus:outline-none "
     >
       <div
         className={`w-16 h-16 mb-2 flex items-center justify-center ${bgColor} rounded-full transition-colors hover:bg-opacity-80`}
