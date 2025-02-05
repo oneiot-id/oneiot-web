@@ -5,12 +5,13 @@ import BottomNav from "../../components/BottomNav";
 import StepNavigation from "../../components/StepNavigation";
 import InputField from "../../components/InputField";
 import SelectField from "../../components/SelectField";
+import axios from "axios";
 
 export default function OrderPage() {
   const [activeItem, setActiveItem] = useState("order");
   const [step, setStep] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(true);
 
   // User data state
   const [userData, setUserData] = useState({
@@ -154,10 +155,60 @@ export default function OrderPage() {
     setOrderDetails((prev) => ({ ...prev, briefPoints: updatedBriefPoints }));
   };
 
-  // Handle form submission
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log("Order submitted:", { userData, orderDetails });
-    alert("Order confirmed!");
+    try {
+      const requestBody = {
+        data: {
+          user: {
+            email: userData.email,
+            password: "$2a$10$j/rsX1HPjmeRLlfDBKQYseP1rd.uhUo.LAHcYwOMMUSnn/vUGgdc.", 
+          },
+          buyer: {
+            full_name: userData.fullName,
+            email: userData.email,
+            phone_number: userData.phoneNumber,
+            full_address: userData.address,
+            additional_notes: userData.additionalNotes,
+          },
+          order_detail: {
+            order_name: orderDetails.serviceName,
+            services_id: 1, 
+            deadline: new Date(orderDetails.deadline).toISOString(), 
+            speed: orderDetails.workSpeed,
+            brief_file: `${orderDetails.serviceName}_brief.pdf`, 
+            important_point: orderDetails.briefPoints
+              .map((point) => point.text)
+              .join(", "), 
+            additional_notes: orderDetails.additionalNotes,
+            order_summary_file: "summary.pdf", 
+          },
+        },
+      };
+
+      const response = await axios.post(
+        "http://localhost:8000/api/order",
+        requestBody,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Handle the response
+      if (response.status === 200 || response.status === 201) {
+        console.log("Order submitted successfully:", response.data);
+        alert("Order confirmed!");
+
+        setStep(4); 
+      } else {
+        console.error("Failed to submit order:", response.data);
+        alert("Failed to submit order. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting order:", error);
+    }
   };
 
   return (
@@ -257,7 +308,7 @@ export default function OrderPage() {
                       </button>
                       <button
                         onClick={() => {
-                          handleNextStep();
+                          handleSubmit();
                         }}
                         className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
