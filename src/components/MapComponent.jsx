@@ -48,7 +48,19 @@ export default function MapComponent({ onLocationSelect }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
-      <Marker position={position}>
+      <Marker
+        position={position}
+        draggable={true}
+        eventHandlers={{
+          dragend: (e) => {
+            const newPosition = e.target.getLatLng();
+            setPosition([newPosition.lat, newPosition.lng]);
+            if (onLocationSelect) {
+              onLocationSelect(newPosition.lat, newPosition.lng);
+            }
+          },
+        }}
+      >
         <Popup>Drag the marker or click the map to select your location.</Popup>
       </Marker>
     </MapContainer>

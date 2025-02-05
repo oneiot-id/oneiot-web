@@ -13,10 +13,14 @@ export default function ProfilePicturePage() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProfilePicture(file);
-      const imageUrl = URL.createObjectURL(file);
-      setPreview(imageUrl);
-      localStorage.setItem("profilePicture", imageUrl);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result; 
+        setProfilePicture(file);
+        setPreview(base64String); 
+        localStorage.setItem("profilePicture", base64String); 
+      };
+      reader.readAsDataURL(file); 
     }
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { EnvelopeIcon } from "@heroicons/react/24/solid";
 import Card from "../../components/Card";
 import BackButton from "../../components/BackButton";
@@ -10,6 +10,7 @@ export default function VerifyPinPage() {
   const [code, setCode] = useState("");
   const [timer, setTimer] = useState(60);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
+  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,6 +24,9 @@ export default function VerifyPinPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
+  const fullName = location.state?.fullName || "";
+  const email = location.state?.email || "";
+
   const handleBack = () => {
     navigate("/register");
   };
@@ -32,7 +36,7 @@ export default function VerifyPinPage() {
     const storedCode = localStorage.getItem("verificationCode");
 
     if (code === storedCode) {
-      navigate("/biodata");
+      navigate("/biodata", { state: { fullName, email } });
     } else {
       alert("Kode verifikasi tidak valid.");
     }

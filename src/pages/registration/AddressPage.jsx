@@ -6,6 +6,7 @@ import FormInput from "../../components/FormInput";
 import SubmitButton from "../../components/SubmitButton";
 import MapComponent from "../../components/MapComponent";
 import BackButton from "../../components/BackButton";
+import axios from "axios";
 
 export default function AddressPage() {
   const [address, setAddress] = useState("");
@@ -13,15 +14,74 @@ export default function AddressPage() {
   const navigate = useNavigate();
 
   const handleLocationSelect = (lat, lng) => setLocation({ lat, lng });
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/registrationdone");
+
+    try {
+      const userData = {
+        user: {
+          Id: 0, 
+          full_name: localStorage.getItem("fullName"),
+          email: localStorage.getItem("email"),
+          password: localStorage.getItem("password"),
+          phone_number: localStorage.getItem("phoneNumber"),
+          picture: "",
+          address: address,
+          pin_point: JSON.stringify(location),
+        },
+      };
+
+      const registerResponse = await axios.post(
+        "http://localhost:8000/api/register",
+        userData
+      );
+
+      if (registerResponse.status !== 201) {
+        throw new Error("Registrasi gagal.");
+      }
+
+      const userId = registerResponse.data.data.id;
+
+      // Convert Base64 string to a File
+      const base64String = localStorage.getItem("profilePicture");
+      if (!base64String) {
+        alert("Foto profil belum dipilih.");
+        return;
+      }
+
+      const blob = await fetch(base64String).then((res) => res.blob()); // Convert Base64 to Blob
+      const file = new File([blob], `user_${userId}_profile.jpg`, {
+        type: blob.type,
+      });
+
+      const formData = new FormData();
+      formData.append("image_data", file);
+      formData.append("user_email", localStorage.getItem("email"));
+      formData.append("user_password", localStorage.getItem("password"));
+
+      const uploadResponse = await axios.post(
+        "http://localhost:8000/api/user/upload-image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      if (uploadResponse.status !== 200) {
+        throw new Error("Gagal mengunggah foto profil.");
+      }
+
+      navigate("/registrationdone");
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
+    }
   };
-  const handleBack = () => navigate('/profilepicture')
+
+  const handleBack = () => navigate("/profilepicture");
 
   return (
     <Card>
-      <BackButton onClick={handleBack}/>
+      <BackButton onClick={handleBack} />
       <Header
         title="Isi Alamat Anda"
         subtitle="Gunakan alamat Anda sekarang untuk pengiriman produk atau alat."

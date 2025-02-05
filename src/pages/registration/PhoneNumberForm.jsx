@@ -14,6 +14,7 @@ export default function PhoneNumberForm() {
   };
 
   const handleSubmit = () => {
+    localStorage.setItem("phoneNumber", phoneNumber);
     navigate("/numberverification");
   };
 

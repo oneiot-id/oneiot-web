@@ -373,7 +373,7 @@ function OrderSelection({ onProductSelect, orderDetails }) {
           onClick={onProductSelect}
           className="flex flex-col items-center justify-center w-32 h-32 border border-gray-400 rounded-2xl shadow-md"
         >
-          <img src="add-order.png" className="w-10 h-10" alt="Add Order" />
+          <img src="/add-order.png" className="w-10 h-10" alt="Add Order" />
           <span className="mt-2 text-sm font-bold text-black">Pesan</span>
         </button>
         {orderDetails.product && (

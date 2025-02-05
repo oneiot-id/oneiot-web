@@ -41,9 +41,12 @@ export default function Register() {
       const verificationCode = response.data.payload.uniqueCode;
       localStorage.setItem("verificationCode", verificationCode);
 
+      localStorage.setItem("fullName", fullName);
+      localStorage.setItem("email", email);
+
       console.log(response, verificationCode);
 
-      navigate("/verify");
+      navigate("/verify", { state: { fullName, email } });
     } catch (error) {
       console.error("Error verifying email:", error);
       if (error.response) {
