@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
-export default function HomeHeader({ title, className = "" }) {
+export default function HomeHeader({ title, className = "", picture }) {
   const navigate = useNavigate();
-  const profilePicture = localStorage.getItem("profilePicture"); // Retrieve the uploaded profile picture from localStorage
 
   const handleProfileClick = () => {
     navigate("/profile"); // Navigate to the profile page
@@ -16,9 +15,9 @@ export default function HomeHeader({ title, className = "" }) {
         </h1>
         <button onClick={handleProfileClick} className="focus:outline-none">
           <div className="w-12 h-12 rounded-full overflow-hidden border-">
-            {profilePicture ? (
+            {picture ? (
               <img
-                src={profilePicture}
+                src={picture}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />

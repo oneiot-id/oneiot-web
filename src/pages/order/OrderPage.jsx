@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import HomeHeader from "../../components/HomeHeader";
 import BottomNav from "../../components/BottomNav";
@@ -28,7 +28,7 @@ export default function OrderPage() {
     product: "",
     deadline: "",
     workSpeed: "",
-    briefTemplate: null,
+    brief: null,
     additionalNotes: "",
     briefPoints: [{ id: 1, text: "", isFocused: false }],
   });
@@ -56,7 +56,7 @@ export default function OrderPage() {
       product: "",
       deadline: "",
       workSpeed: "",
-      briefTemplate: null,
+      brief: null,
       additionalNotes: "",
       briefPoints: [{ id: 1, text: "", isFocused: false }],
     });
@@ -113,6 +113,30 @@ export default function OrderPage() {
     setOrderDetails((prev) => ({ ...prev, [name]: value }));
   };
 
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const name = e.target.name;
+    const file = e.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setOrderDetails((prev) => ({ ...prev, [name]: file }));
+    } else {
+      alert("Please upload a valid PDF file");
+    }
+  };
+
+  const handleDeleteFile = () => {
+    setOrderDetails((prev) => ({ ...prev, brief: null }));
+    if (fileInputRef.value.current) {
+      fileInputRef.current.value = "";
+    }
+
+    // const fileInput = document.querySelector('input[name="brief"]');
+    // if (fileInput) {
+    //   fileInput.value = "";
+    // }
+  };
+
   const handleAddBriefPoint = () => {
     const newBriefPoint = {
       id: orderDetails.briefPoints.length + 1,
@@ -155,36 +179,52 @@ export default function OrderPage() {
     setOrderDetails((prev) => ({ ...prev, briefPoints: updatedBriefPoints }));
   };
 
+  // console.log(userData, orderDetails);
+
   const handleSubmit = async () => {
     console.log("Order submitted:", { userData, orderDetails });
     try {
+      const userEmail = localStorage.getItem("email");
+      const userPassword = localStorage.getItem("password");
+
+      let formattedNumber = userData.phoneNumber;
+      if (
+        formattedNumber &&
+        !formattedNumber.startsWith("62") &&
+        !formattedNumber.startsWith("0")
+      ) {
+        formattedNumber = `62${formattedNumber}`;
+      }
+
       const requestBody = {
         data: {
           user: {
-            email: userData.email,
-            password: "$2a$10$j/rsX1HPjmeRLlfDBKQYseP1rd.uhUo.LAHcYwOMMUSnn/vUGgdc.", 
+            email: userEmail,
+            password: userPassword,
           },
           buyer: {
             full_name: userData.fullName,
             email: userData.email,
-            phone_number: userData.phoneNumber,
+            phone_number: formattedNumber,
             full_address: userData.address,
             additional_notes: userData.additionalNotes,
           },
           order_detail: {
             order_name: orderDetails.serviceName,
-            services_id: 1, 
-            deadline: new Date(orderDetails.deadline).toISOString(), 
+            services_id: 2,
+            deadline: new Date(orderDetails.deadline).toISOString(),
             speed: orderDetails.workSpeed,
-            brief_file: `${orderDetails.serviceName}_brief.pdf`, 
+            brief_file: `${orderDetails.serviceName}_brief.pdf`,
             important_point: orderDetails.briefPoints
               .map((point) => point.text)
-              .join(", "), 
+              .join(", "),
             additional_notes: orderDetails.additionalNotes,
-            order_summary_file: "summary.pdf", 
+            order_summary_file: "summary.pdf",
           },
         },
       };
+
+      console.log(requestBody);
 
       const response = await axios.post(
         "http://localhost:8000/api/order",
@@ -196,20 +236,55 @@ export default function OrderPage() {
         }
       );
 
-      // Handle the response
-      if (response.status === 200 || response.status === 201) {
-        console.log("Order submitted successfully:", response.data);
-        alert("Order confirmed!");
-
-        setStep(4); 
-      } else {
-        console.error("Failed to submit order:", response.data);
-        alert("Failed to submit order. Please try again.");
+      // if (response.status === 200 || response.status === 201) {
+      //   console.log("Order submitted successfully:", response.data);
+      //   alert("Order confirmed!");
+      //   setStep(4);
+      // } else {
+      //   console.error("Failed to submit order:", response.data);
+      //   alert("Failed to submit order. Please try again.");
+      // }
+      if (response.status !== 200 && response.status !== 201) {
+        throw new Error("Failed to submit order details");
       }
+
+      console.log("Order details submitted successfully:", response.data);
+
+      const orderId = response.data.data.order.order.id;
+      console.log(orderId);
+
+      if (orderDetails.brief) {
+        const formData = new FormData();
+        formData.append("brief_file", orderDetails.brief);
+        formData.append("user_email", userEmail);
+        formData.append("user_password", userPassword);
+        formData.append("order_id", orderId);
+
+        const uploadResponse = await axios.post(
+          "http://localhost:8000/api/order/upload-brief",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (uploadResponse.status !== 200 && uploadResponse.status !== 201) {
+          throw new Error("Failed to upload brief file");
+        }
+
+        console.log("Brief file uploaded successfully:", uploadResponse.data);
+      }
+
+      alert("order confirmed");
+      setStep(4);
     } catch (error) {
       console.error("Error submitting order:", error);
     }
   };
+
+  // console.log(orderDetails.brief);
 
   return (
     <>
@@ -240,6 +315,9 @@ export default function OrderPage() {
                   <OrderDetails
                     orderDetails={orderDetails}
                     handleOrderDetailsChange={handleOrderDetailsChange}
+                    fileInputRef={fileInputRef}
+                    handleFileUpload={handleFileUpload}
+                    handleDeleteFile={handleDeleteFile}
                     handleAddBriefPoint={handleAddBriefPoint}
                     handleBriefPointChange={handleBriefPointChange}
                     handleSaveBriefPoint={handleSaveBriefPoint}
@@ -511,7 +589,7 @@ function OrderPersonalData({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Nomor WhatsApp
         </label>
-        <div className="mt-1 relative rounded-md shadow-sm">
+        <div className="mt-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <img
               src="https://flagcdn.com/id.svg"
@@ -525,7 +603,7 @@ function OrderPersonalData({
             name="phoneNumber"
             value={userData.phoneNumber}
             onChange={handlePhoneNumberChange}
-            className="block w-full pl-20 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="block w-full pl-20 pr-4 py-3 border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -554,6 +632,9 @@ function OrderPersonalData({
 function OrderDetails({
   orderDetails,
   handleOrderDetailsChange,
+  fileInputRef,
+  handleFileUpload,
+  handleDeleteFile,
   handleAddBriefPoint,
   handleBriefPointChange,
   handleSaveBriefPoint,
@@ -570,10 +651,19 @@ function OrderDetails({
   ];
 
   const workSpeedOptions = [
-    { value: "Reguler", label: "Reguler" },
+    { value: "", label: "Pilih Kecepatan Pengerjaan" },
+    { value: "Regular", label: "Regular" },
     { value: "Express", label: "Express" },
-    { value: "FS", label: "FS" },
+    { value: "FullSpeed", label: "FullSpeed" },
   ];
+
+  const handleFileInputClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  console.log(orderDetails.workSpeed);
 
   return (
     <>
@@ -610,24 +700,34 @@ function OrderDetails({
         options={workSpeedOptions}
       />
 
+      {/* Brief pengerjaan */}
       <div className="w-full max-w-md">
-        <h2 className="text-lg font-semibold">Brief Pengerjaan</h2>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Brief Pengerjaan
+        </label>
         <div className="flex items-center justify-between p-3 mt-2 border border-gray-300 rounded-lg shadow-sm">
           <div className="flex items-center space-x-2">
-            <img src="/doc-icon.png" alt="Document" className="w-6 h-6" />
-            <span className="text-sm text-gray-700">
-              [OneloT Brief Template].docx
-            </span>
+            <img src="/pdf-icon.png" alt="Document" className="w-6 h-6" />
+            {!orderDetails.brief ? (
+              <input
+                type="file"
+                accept=".pdf"
+                name="brief"
+                onChange={handleFileUpload}
+                ref={fileInputRef}
+                onClick={handleFileInputClick}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!!orderDetails.brief}
+              />
+            ) : (
+              <span className="text-sm text-gray-700">
+                {orderDetails.brief.name}
+              </span>
+            )}
           </div>
-          <a
-            href="/OneIoT_Project_Template.docx"
-            download
-            className="text-blue-500"
-          >
-            <img src="/download-icon.png" className="w-6 h-6" />
-          </a>
+          <img src="/upload-icon.png" className="w-6 h-6" />
         </div>
-        <div className="text-right">
+        <div className="flex justify-end mt-2">
           <a
             href="/OneIoT_Project_Template.docx"
             download
@@ -635,6 +735,14 @@ function OrderDetails({
           >
             Unduh Template
           </a>
+          {!!orderDetails.brief && (
+            <button
+              onClick={handleDeleteFile}
+              className="ml-4 text-sm text-red-600 font-semibold"
+            >
+              <img src="/trash-icon.png" className="w-6 h-6" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -655,7 +763,7 @@ function OrderDetails({
                   handleBriefPointChange(point.id, e.target.value)
                 }
                 onFocus={() => handleFocusBriefPoint(point.id)}
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={4}
               />
             </div>
@@ -672,7 +780,7 @@ function OrderDetails({
                     onClick={() => handleDeleteBriefPoint(point.id)}
                     // className="bg-red-600 text-white py-1 px-3 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
-                    <img src="/trash-icon.png" className="w-8 h-8" />
+                    <img src="/trash-icon.png" className="w-6 h-6" />
                   </button>
                 )}
               </div>
@@ -699,61 +807,64 @@ function OrderDetails({
   );
 }
 
-function CheckIcon() {
-  return (
-    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-4 w-4 text-white"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-            clipRule="evenodd"
-          />
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        fill="currentColor"
-        className="bi bi-download fill-blue-600"
-        viewBox="0 0 16 16"
-      >
-        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
-        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z" />
-      </svg>
-    </div>
-  );
-}
-
-function ReviewSquare({ label, content, className = "" }) {
+function ReviewSquare({ label, content, className = "", handleDownload }) {
   return (
     <div className="mb-6">
-      <h2 className="text-lg font-semibold mb-2">{label}</h2>
+      <label className="block text-sm font-medium mb-2">{label}</label>
       <div
-        className={`bg-gray-100 pl-3 pr-7 py-3 rounded-lg relative ${className}`}
+        className={`flex justify-between items-center bg-gray-100 px-3 py-3 rounded-lg relative ${className}`}
       >
-        <p className="text-gray-700  transform translate-y-2">{content}</p>
-        {label === "Rangkuman Pemesanan" ? <DownloadIcon /> : <CheckIcon />}
+        <div className="text-gray-700 break-all mr-5">{content}</div>
+        {label === "Rangkuman Pemesanan" ? (
+          <button
+            onClick={handleDownload}
+            // className="absolute right-3 top-1/2 transform -translate-y-1/2"
+          >
+            <img src="/download-icon.png" alt="Download" className="w-6 h-6" />
+          </button>
+        ) : (
+          <img src="/check-icon.png" alt="Download" className="w-6 h-6" />
+        )}
       </div>
     </div>
   );
 }
 
 function OrderReview({ userData, orderDetails }) {
-  console.log(userData.phoneNumber);
+  const [fileUrl, setFileUrl] = useState(null);
+
+  useEffect(() => {
+    if (orderDetails.brief) {
+      const url = URL.createObjectURL(orderDetails.brief);
+      setFileUrl(url);
+    } else {
+      setFileUrl(null);
+    }
+  }, [orderDetails.brief]);
+
+  // useEffect(() => {
+  //   return () => {
+  //     if (fileUrl) {
+  //       URL.revokeObjectURL(fileUrl);
+  //     }
+  //   };
+  // }, [fileUrl]);
+
+  const handleDownload = () => {
+    if (fileUrl) {
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = orderDetails.brief.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // setTimeout(() => {
+      //   URL.revokeObjectURL(fileUrl);
+      //   setFileUrl(null);
+      // }, 100);
+    }
+  };
 
   return (
     <>
@@ -765,7 +876,16 @@ function OrderReview({ userData, orderDetails }) {
 
       <ReviewSquare
         label={"Rangkuman Pemesanan"}
-        content={orderDetails.serviceName}
+        content={
+          orderDetails.brief ? (
+            <button onClick={handleDownload} className="hover:underline">
+              {orderDetails.brief.name}
+            </button>
+          ) : (
+            "Tidak ada file yang diunggah"
+          )
+        }
+        handleDownload={handleDownload}
         className="bg-white border border-gray-300"
       />
       <ReviewSquare label={"Nama Lengkap"} content={userData.fullName} />
@@ -871,8 +991,8 @@ function OrderSummary({ orderDetails, userData }) {
 function SummaryRow({ label, value, className = "" }) {
   return (
     <div className="flex justify-between items-center mb-3">
-      <h2 className="text-base text-[#686868]">{label}</h2>
-      <p className={`text-base ${className}`}>{value}</p>
+      <p className="text-base text-[#686868]">{label}</p>
+      <p className={`text-right ml-10 break-all ${className}`}>{value}</p>
     </div>
   );
 }

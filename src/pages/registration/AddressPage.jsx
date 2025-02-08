@@ -21,7 +21,7 @@ export default function AddressPage() {
     try {
       const userData = {
         user: {
-          Id: 0, 
+          Id: 0,
           full_name: localStorage.getItem("fullName"),
           email: localStorage.getItem("email"),
           password: localStorage.getItem("password"),
@@ -41,6 +41,8 @@ export default function AddressPage() {
         throw new Error("Registrasi gagal.");
       }
 
+      console.log("Registering done successfully:", registerResponse.data);
+
       const userId = registerResponse.data.data.id;
 
       // Convert Base64 string to a File
@@ -55,10 +57,14 @@ export default function AddressPage() {
         type: blob.type,
       });
 
+      console.log(file);
+
       const formData = new FormData();
       formData.append("image_data", file);
       formData.append("user_email", localStorage.getItem("email"));
       formData.append("user_password", localStorage.getItem("password"));
+
+      console.log(formData);
 
       const uploadResponse = await axios.post(
         "http://localhost:8000/api/user/upload-image",
@@ -66,6 +72,8 @@ export default function AddressPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
+      console.log(uploadResponse);
+      
       if (uploadResponse.status !== 200) {
         throw new Error("Gagal mengunggah foto profil.");
       }

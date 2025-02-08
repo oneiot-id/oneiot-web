@@ -5,7 +5,7 @@ import BackButton from "../../components/BackButton";
 import Header from "../../components/Header";
 import FormInput from "../../components/FormInput";
 import SubmitButton from "../../components/SubmitButton";
-import bcrypt from "bcryptjs";
+// import bcrypt from "bcryptjs";
 
 export default function BiodataForm() {
   const location = useLocation();
@@ -19,12 +19,12 @@ export default function BiodataForm() {
 
   const handleBack = () => navigate("/verify");
 
-  const hashPassword = async(password) => {
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
+  // const hashPassword = async(password) => {
+  //   const salt = await bcrypt.genSalt(10)
+  //   const hashedPassword = await bcrypt.hash(password, salt)
 
-    return hashedPassword
-  }
+  //   return hashedPassword
+  // }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,14 +34,8 @@ export default function BiodataForm() {
       return;
     }
 
-    try {
-      const hashedPassword = await hashPassword(password);
-      localStorage.setItem("password", hashedPassword);
-      navigate("/phonenumber");
-    } catch (error) {
-      console.error("Error hashing password:", error);
-      alert("Terjadi kesalahan saat memproses password. Silakan coba lagi.");
-    }
+    localStorage.setItem("password", password);
+    navigate("/phonenumber");
   };
 
   const togglePasswordVisibility = () => {

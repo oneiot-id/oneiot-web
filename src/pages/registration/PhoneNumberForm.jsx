@@ -14,7 +14,13 @@ export default function PhoneNumberForm() {
   };
 
   const handleSubmit = () => {
-    localStorage.setItem("phoneNumber", phoneNumber);
+    let formattedNumber = phoneNumber;
+
+    if (phoneNumber && !formattedNumber.startsWith("62") && !formattedNumber.startsWith("0")) {
+      formattedNumber = `62${formattedNumber}`;
+    }
+
+    localStorage.setItem("phoneNumber", formattedNumber);
     navigate("/numberverification");
   };
 

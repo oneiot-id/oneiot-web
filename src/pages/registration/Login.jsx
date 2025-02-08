@@ -16,18 +16,11 @@ export default function Login() {
   const handleBack = () => navigate("/");
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
+      // const salt = await bcrypt.genSalt();
+      // const hashedPassword = await bcrypt.hash(password, salt);
 
       const requestBody = { user: { email: email, password: password } };
-
-      // const response = await axios({
-      //   method: "get",
-      //   url: "http://localhost:8000/api/login",
-      //   data: requestBody,
-      // });
 
       const response = await axios.post(
         "http://localhost:8000/api/login",
@@ -35,7 +28,10 @@ export default function Login() {
       );
 
       if (response.status === 200) {
-        navigate("/home"); // Navigate to the home page on successful login
+        localStorage.setItem('email', email)
+        localStorage.setItem('password', password)
+        
+        navigate("/home"); 
       } else {
         alert("Login gagal. Silakan cek email dan password Anda.");
       }

@@ -6,10 +6,12 @@ import BackButton from "../../components/BackButton";
 import Header from "../../components/Header";
 import FormInput from "../../components/FormInput";
 import SubmitButton from "../../components/SubmitButton";
+import { PulseLoader } from "react-spinners";
 
 export default function Register() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleBack = () => navigate("/");
@@ -20,6 +22,8 @@ export default function Register() {
       alert("Nama lengkap dan email harus diisi.");
       return;
     }
+
+    setLoading(true);
 
     try {
       const response = await axios.post(
@@ -57,6 +61,8 @@ export default function Register() {
       } else {
         console.error("Error setting up the request:", error.message);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,7 +87,13 @@ export default function Register() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <SubmitButton>Verifikasi Email</SubmitButton>
+        <SubmitButton disabled={loading}>
+          {loading ? (
+            <PulseLoader color="#ffffff" size={10} />
+          ) : (
+            "Verifikasi Email"
+          )}
+        </SubmitButton>
       </form>
       <p className="mt-6 text-center text-sm text-gray-600">
         Sudah memiliki akun?{" "}

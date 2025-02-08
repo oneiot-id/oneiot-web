@@ -18,7 +18,7 @@ export default function Product() {
   return (
     <>
       <h1 className="text-2xl font-bold mb-1">Produk</h1>
-      <div className="flex space-x-4 p-4">
+      <div className="flex space-x-6 p-4">
         {products.map((product, index) => (
           <ProductCard
             key={index}
