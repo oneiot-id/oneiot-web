@@ -1,7 +1,64 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { PulseLoader } from "react-spinners";
 
-export default function HomeHeader({ title, className = "", picture }) {
+export default function HomeHeader({ title, className = "" }) {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const email = localStorage.getItem("email");
+        const password = localStorage.getItem("password");
+        // console.log('Getting user', [email, password]);
+        
+
+        if (!email || !password) {
+          setLoading(false)
+          return;
+        }
+
+        const requestBody = { user: { email: email, password: password } };
+
+        const response = await axios.post(
+          "http://localhost:8000/api/user",
+          requestBody
+        );
+
+        // console.log(response.data);
+
+        if (response.status === 200) {
+          const pictureUrl = response.data.data.picture?.replace(
+            "127.0.0.1:8080",
+            ""
+          );
+
+          // console.log(pictureUrl);
+          
+          setUserData({ ...response.data.data, picture: pictureUrl });
+        } else {
+          console.error("Failed to fetching user data:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false)
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <PulseLoader size={20} color="#005FFE" margin={4} speedMultiplier={3}/>
+      </div>
+    );
+  }
 
   const handleProfileClick = () => {
     navigate("/profile"); // Navigate to the profile page
@@ -15,9 +72,9 @@ export default function HomeHeader({ title, className = "", picture }) {
         </h1>
         <button onClick={handleProfileClick} className="focus:outline-none">
           <div className="w-12 h-12 rounded-full overflow-hidden border-">
-            {picture ? (
+            {userData ? (
               <img
-                src={picture}
+                src={`http://localhost:8000${userData?.picture}`}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />

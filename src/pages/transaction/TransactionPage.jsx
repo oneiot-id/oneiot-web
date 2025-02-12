@@ -265,7 +265,7 @@ function PositiveButtonNavigation({
   className = "",
   isDisabled = false,
 }) {
-  console.log(isDisabled);
+  // console.log(isDisabled);
 
   return (
     <button

@@ -12,6 +12,7 @@ export default function OrderPage() {
   const [step, setStep] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderConfirmed, setOrderConfirmed] = useState(true);
+  const [activeOrders, setActiveOrders] = useState([]);
 
   // User data state
   const [userData, setUserData] = useState({
@@ -32,6 +33,46 @@ export default function OrderPage() {
     additionalNotes: "",
     briefPoints: [{ id: 1, text: "", isFocused: false }],
   });
+
+  const userEmail = localStorage.getItem("email");
+  const userPassword = localStorage.getItem("password");
+
+  useEffect(() => {
+    const fetchActiveOrders = async () => {
+      try {
+        const requestBody = {
+          data: {
+            user: {
+              email: userEmail,
+              password: userPassword,
+            },
+          },
+        };
+
+        const response = await axios.post(
+          "http://localhost:8000/api/orders",
+          requestBody
+        );
+
+        // console.log(response.data.data.orders);
+
+        if (
+          response.status === 200 &&
+          response.data &&
+          response.data.data.orders
+        ) {
+          // const active = response.data.data.orders.filter(
+          //   (order) => order.order.is_active
+          // );
+          setActiveOrders(response.data.data.orders);
+        }
+      } catch (error) {
+        console.error("Error fetching orders", error);
+      }
+    };
+
+    fetchActiveOrders();
+  }, [userEmail, userPassword]);
 
   const orderSteps = [
     { id: 1, label: "Isi Data Diri" },
@@ -179,14 +220,9 @@ export default function OrderPage() {
     setOrderDetails((prev) => ({ ...prev, briefPoints: updatedBriefPoints }));
   };
 
-  // console.log(userData, orderDetails);
-
   const handleSubmit = async () => {
     console.log("Order submitted:", { userData, orderDetails });
     try {
-      const userEmail = localStorage.getItem("email");
-      const userPassword = localStorage.getItem("password");
-
       let formattedNumber = userData.phoneNumber;
       if (
         formattedNumber &&
@@ -294,6 +330,7 @@ export default function OrderPage() {
           <OrderSelection
             onProductSelect={() => setStep(1)}
             orderDetails={orderDetails}
+            {...(activeOrders.length > 0 && { activeOrders })}
           />
         )}
         {step > 0 && (
@@ -441,7 +478,7 @@ export default function OrderPage() {
   );
 }
 
-function OrderSelection({ onProductSelect, orderDetails }) {
+function OrderSelection({ onProductSelect, orderDetails, activeOrders = [] }) {
   const reviews = [
     {
       name: "Erlangga Satrya",
@@ -494,6 +531,8 @@ function OrderSelection({ onProductSelect, orderDetails }) {
     },
   };
 
+  activeOrders.map((order) => console.log(order));
+
   return (
     <div className="flex flex-col p-3 pt-0 mb-20">
       <p className="text-xl mb-4">Buat Pemesanan Baru</p>
@@ -519,18 +558,25 @@ function OrderSelection({ onProductSelect, orderDetails }) {
         )}
       </div>
 
-      {orderDetails.serviceName && (
+      {activeOrders && activeOrders.length > 0 && (
         <div className="mt-8 space-y-4">
           <h2 className="text-xl font-bold mb-4">Pesanan Aktif</h2>
-          <div className="bg-white border border-gray-300 px-4 pt-3 pb-2 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold">
-              {orderDetails.serviceName}
-              <span className="text-sm text-[#FBB214] absolute right-12 pt-3">
-                Menunggu
-              </span>
-            </h3>
-            <p className="text-sm text-gray-600">09:58 27/01/2025</p>
-          </div>
+          {activeOrders.map((order, index) => (
+            <div
+              key={index}
+              className="bg-white border border-gray-300 px-4 pt-3 pb-2 rounded-lg shadow-md"
+            >
+              <h3 className="text-lg font-semibold">
+                {order.order_detail.order_name}
+                <span className="text-sm text-[#FBB214] absolute right-12 pt-3">
+                  Menunggu
+                </span>
+              </h3>
+              <p className="text-sm text-gray-600">
+                {new Date(order.order.created_at).toLocaleString()}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
@@ -654,7 +700,7 @@ function OrderDetails({
     { value: "", label: "Pilih Kecepatan Pengerjaan" },
     { value: "Regular", label: "Regular" },
     { value: "Express", label: "Express" },
-    { value: "FullSpeed", label: "FullSpeed" },
+    { value: "Full Speed", label: "Full Speed" },
   ];
 
   const handleFileInputClick = () => {
