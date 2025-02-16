@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { data, useLocation } from "react-router-dom";
 import HomeHeader from "../../components/HomeHeader";
 import BottomNav from "../../components/BottomNav";
 import StepNavigation from "../../components/StepNavigation";
@@ -13,6 +13,7 @@ export default function OrderPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderConfirmed, setOrderConfirmed] = useState(true);
   const [activeOrders, setActiveOrders] = useState([]);
+  const [orderStatus, setOrderStatus] = useState({});
 
   // User data state
   const [userData, setUserData] = useState({
@@ -37,6 +38,7 @@ export default function OrderPage() {
   const userEmail = localStorage.getItem("email");
   const userPassword = localStorage.getItem("password");
 
+  // Get orders (all)
   useEffect(() => {
     const fetchActiveOrders = async () => {
       try {
@@ -53,8 +55,6 @@ export default function OrderPage() {
           "http://localhost:8000/api/orders",
           requestBody
         );
-
-        // console.log(response.data.data.orders);
 
         if (
           response.status === 200 &&
@@ -73,6 +73,49 @@ export default function OrderPage() {
 
     fetchActiveOrders();
   }, [userEmail, userPassword]);
+
+  //Get orders (1 order)
+  useEffect(() => {
+    const fectOrderStatus = async (orderId) => {
+      try {
+        const requestBody = {
+          data: {
+            user: {
+              email: userEmail,
+              password: userPassword,
+            },
+            order: {
+              id: orderId,
+            },
+          },
+        };
+
+        console.log(requestBody);
+
+        const response = await axios.post(
+          "http://localhost:8000/api/order-status",
+          requestBody
+        );
+
+        if (response.status === 200 && response.data && response.data.order) {
+          setOrderStatus((prevStatus) => ({
+            ...prevStatus,
+            [orderId]: response.data.order,
+          }));
+        }
+      } catch (error) {
+        console.error(`Error fetching status for order ${orderId}`, error);
+      }
+    };
+
+    activeOrders.forEach((order) => {
+      if (order.order && order.order.id) {
+        fectOrderStatus(order.order.id);
+      }
+    });
+  }, [activeOrders, userEmail, userPassword]);
+
+  const hasOrderStatusContent = Object.keys(orderStatus).length > 0;
 
   const orderSteps = [
     { id: 1, label: "Isi Data Diri" },
@@ -260,8 +303,6 @@ export default function OrderPage() {
         },
       };
 
-      console.log(requestBody);
-
       const response = await axios.post(
         "http://localhost:8000/api/order",
         requestBody,
@@ -272,14 +313,6 @@ export default function OrderPage() {
         }
       );
 
-      // if (response.status === 200 || response.status === 201) {
-      //   console.log("Order submitted successfully:", response.data);
-      //   alert("Order confirmed!");
-      //   setStep(4);
-      // } else {
-      //   console.error("Failed to submit order:", response.data);
-      //   alert("Failed to submit order. Please try again.");
-      // }
       if (response.status !== 200 && response.status !== 201) {
         throw new Error("Failed to submit order details");
       }
@@ -287,7 +320,6 @@ export default function OrderPage() {
       console.log("Order details submitted successfully:", response.data);
 
       const orderId = response.data.data.order.order.id;
-      console.log(orderId);
 
       if (orderDetails.brief) {
         const formData = new FormData();
@@ -320,8 +352,6 @@ export default function OrderPage() {
     }
   };
 
-  // console.log(orderDetails.brief);
-
   return (
     <>
       <HomeHeader title="Pemesanan" />
@@ -331,6 +361,7 @@ export default function OrderPage() {
             onProductSelect={() => setStep(1)}
             orderDetails={orderDetails}
             {...(activeOrders.length > 0 && { activeOrders })}
+            {...(hasOrderStatusContent && { orderStatus })}
           />
         )}
         {step > 0 && (
@@ -478,7 +509,12 @@ export default function OrderPage() {
   );
 }
 
-function OrderSelection({ onProductSelect, orderDetails, activeOrders = [] }) {
+function OrderSelection({
+  onProductSelect,
+  orderDetails,
+  activeOrders = [],
+  orderStatus = {},
+}) {
   const reviews = [
     {
       name: "Erlangga Satrya",
@@ -531,7 +567,7 @@ function OrderSelection({ onProductSelect, orderDetails, activeOrders = [] }) {
     },
   };
 
-  activeOrders.map((order) => console.log(order));
+  activeOrders.forEach((order) => console.log(order));
 
   return (
     <div className="flex flex-col p-3 pt-0 mb-20">
@@ -560,7 +596,10 @@ function OrderSelection({ onProductSelect, orderDetails, activeOrders = [] }) {
 
       {activeOrders && activeOrders.length > 0 && (
         <div className="mt-8 space-y-4">
-          <h2 className="text-xl font-bold mb-4">Pesanan Aktif</h2>
+          <h2 className="text-xl font-bold mb-4">
+            Pesanan Aktif{" "}
+            {activeOrders.length > 1 && `(${activeOrders.length})`}
+          </h2>
           {activeOrders.map((order, index) => (
             <div
               key={index}
@@ -568,8 +607,10 @@ function OrderSelection({ onProductSelect, orderDetails, activeOrders = [] }) {
             >
               <h3 className="text-lg font-semibold">
                 {order.order_detail.order_name}
-                <span className="text-sm text-[#FBB214] absolute right-12 pt-3">
-                  Menunggu
+                <span className={`text-sm ${orderStatus[order.order.id]?.confirmed ? 'text-[#4BAE4F]' : 'text-[#FBB214]'} absolute right-12 pt-3`}>
+                  {orderStatus[order.order.id]?.confirmed
+                    ? "Dikonfirmasi"
+                    : "Menunggu"}
                 </span>
               </h3>
               <p className="text-sm text-gray-600">
@@ -708,8 +749,6 @@ function OrderDetails({
       fileInputRef.current.value = "";
     }
   };
-
-  console.log(orderDetails.workSpeed);
 
   return (
     <>

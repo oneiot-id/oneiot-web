@@ -1,11 +1,4 @@
-export default function StepNavigation({ step }) {
-  const steps = [
-    { id: 1, label: "Isi Data Diri" },
-    { id: 2, label: "Pesan Order" },
-    { id: 3, label: "Review" },
-    { id: 4, label: "Konfirmasi" },
-  ];
-
+export default function StepNavigation({ step, steps }) {
   return (
     <div className="flex justify-between items-center mt-4 mb-2 px-4">
       {steps.map((s) => (
